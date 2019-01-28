@@ -16,7 +16,6 @@ def action_elimination(bandit_means, bandit_scales, samples_per_epoch=1,
     n = len(bandit_means)
     bandit_samples = {key: [] for key in range(n)}
     bandit_estimates = [None]*n
-    bandit_bounds = [None]*n
     converged = False
     bandit_set = set(range(n))
 
@@ -74,14 +73,55 @@ def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1):
 
         # Recompute estimate for this arm
         bandit_estimates[arm] = np.mean(bandit_samples[arm])
+        bandit_bounds[arm] = (1+beta)*_compute_bound(
+                                                    t=len(bandit_samples[arm]),
+                                                    eps=epsilon, delta=delta/n)
 
         converged = _check_convergence_ucb(alpha, bandit_samples, n)
 
     return np.argmax(bandit_estimates)
 
 
-def lucb():
-    pass
+def lucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1):
+    """
+    Arguments:
+        - bandit_means: List of Gaussian random variable means
+        - bandit_scales : List of Gaussian random variable
+                             standard deviations (same order)
+        - epsilon : parameter for LIL bound
+        - delta : parameter for LIL bound and confidence level
+    """
+    n = len(bandit_means)
+    bandit_samples = {key: [np.random.normal(bandit_means[key],
+                      bandit_scales[key])] for key in range(n)}
+    bandit_estimates = [bandit_samples[key][0] for key in range(n)]
+    bandit_bounds = [_compute_bound(t=1,
+                     eps=epsilon, delta=delta/n)]*n
+    converged = False
+
+    while not converged:
+        h_t = np.argmax(bandit_estimates)
+        mask = np.ones(len(bandit_estimates))
+        mask[h_t] = -np.inf
+        l_t = np.argmax(np.array(bandit_estimates + np.array(bandit_bounds)) *
+                        mask)
+        # Sample arms
+        bandit_samples[h_t].append(np.random.normal(
+                                   bandit_means[h_t], bandit_scales[h_t]))
+        bandit_samples[l_t].append(np.random.normal(
+                                   bandit_means[l_t], bandit_scales[l_t]))
+        # Recompute estimate for arms
+        bandit_estimates[h_t] = np.mean(bandit_samples[h_t])
+        bandit_bounds[h_t] = _compute_bound(t=len(bandit_samples[h_t]),
+                                            eps=epsilon, delta=delta/n)
+        bandit_estimates[l_t] = np.mean(bandit_samples[l_t])
+        bandit_bounds[l_t] = _compute_bound(t=len(bandit_samples[l_t]),
+                                            eps=epsilon, delta=delta/n)
+
+        converged = _check_convergence_lucb(h_t, l_t,
+                                            bandit_estimates, bandit_bounds)
+
+    return np.argmax(bandit_estimates)
 
 
 def _compute_bound(t, eps, delta):
@@ -99,4 +139,16 @@ def _check_convergence_ucb(alpha, bandit_samples, n):
         return True
     else:
         return False
+
+
+def _check_convergence_lucb(first_arm, second_arm, bandit_estimates,
+                            bandit_bounds):
+    if (bandit_estimates[first_arm] - bandit_bounds[first_arm] >
+       bandit_estimates[second_arm] + bandit_bounds[second_arm]):
+        return True
+    else:
+        return False
+
+
+
 
