@@ -42,7 +42,7 @@ def action_elimination(bandit_means, bandit_scales, samples_per_epoch=1,
             converged = True
         num_epochs += 1
 
-    return bandit_set
+    return bandit_set.pop()
 
 
 def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1):
@@ -61,23 +61,23 @@ def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1):
     alpha = m * (1 + (np.log(2*np.log(m*n/delta))/np.log(n/delta)))
     bandit_samples = {key: [np.random.normal(bandit_means[key],
                       bandit_scales[key])] for key in range(n)}
-    bandit_estimates = [bandit_samples[key] for key in range(n)]
+    bandit_estimates = [bandit_samples[key][0] for key in range(n)]
     bandit_bounds = [(1+beta)*_compute_bound(t=1,
                      eps=epsilon, delta=delta/n)]*n
     converged = False
 
     while not converged:
         # Sample from current best arm
-        arm = np.argmax(np.array(bandit_bounds) + np.array(bandit_samples))
+        arm = np.argmax(np.array(bandit_bounds) + np.array(bandit_estimates))
         bandit_samples[arm].append(np.random.normal(
                                    bandit_means[arm], bandit_scales[arm]))
 
         # Recompute estimate for this arm
         bandit_estimates[arm] = np.mean(bandit_samples[arm])
 
-        converged = _check_convergence()
+        converged = _check_convergence_ucb(alpha, bandit_samples, n)
 
-        return np.argmax(bandit_estimates)
+    return np.argmax(bandit_estimates)
 
 
 def lucb():
@@ -89,3 +89,14 @@ def _compute_bound(t, eps, delta):
     den = 2*t
 
     return (1+np.sqrt(eps))*np.sqrt(num/den)
+
+
+def _check_convergence_ucb(alpha, bandit_samples, n):
+    num_samples = [len(bandit_samples[arm]) for arm in range(n)]
+    m = np.max(num_samples)
+
+    if m > alpha*(np.sum(num_samples) - m):
+        return True
+    else:
+        return False
+
