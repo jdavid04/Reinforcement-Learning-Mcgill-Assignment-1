@@ -44,7 +44,8 @@ def action_elimination(bandit_means, bandit_scales, samples_per_epoch=1,
     return bandit_set.pop()
 
 
-def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1):
+def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1,
+        experiment=False):
     """
     Arguments:
         - bandit_means: List of Gaussian random variable means
@@ -64,10 +65,12 @@ def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1):
     bandit_bounds = [(1+beta)*_compute_bound(t=1,
                      eps=epsilon, delta=delta/n)]*n
     converged = False
-
+    arms_sampled = []
+    n_iter = 1
     while not converged:
         # Sample from current best arm
         arm = np.argmax(np.array(bandit_bounds) + np.array(bandit_estimates))
+        arms_sampled.append(arm)
         bandit_samples[arm].append(np.random.normal(
                                    bandit_means[arm], bandit_scales[arm]))
 
@@ -77,9 +80,16 @@ def ucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1, beta=1):
                                                     t=len(bandit_samples[arm]),
                                                     eps=epsilon, delta=delta/n)
 
-        converged = _check_convergence_ucb(alpha, bandit_samples, n)
+        if experiment:
+            converged = n_iter >= 5006
+        else:
+            converged = _check_convergence_ucb(alpha, bandit_samples, n)
+        n_iter += 1
 
-    return np.argmax(bandit_estimates)
+    if experiment:
+        return arms_sampled
+    else:
+        return np.argmax(bandit_estimates)
 
 
 def lucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1):
@@ -148,7 +158,4 @@ def _check_convergence_lucb(first_arm, second_arm, bandit_estimates,
         return True
     else:
         return False
-
-
-
 
