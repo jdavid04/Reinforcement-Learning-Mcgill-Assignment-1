@@ -33,7 +33,7 @@ def get_avg_probabilities(algo, means, scales, n_runs=1000,
 
 def plot_table(ax, table, n_arms, h1=1):
     for i in range(n_arms):
-        ax.set_xlabel('Number of pulls (Units of H1)')
+        ax.set_xlabel('Number of pulls (units of H1)')
         ax.set_ylabel('P(I_t = i)')
         ax.plot(np.array(range(table.shape[0]))/h1,
                 table[:, i], label=str(i+1))
