@@ -31,10 +31,20 @@ def get_avg_probabilities(algo, means, scales, n_runs=1000,
     return table
 
 
-def plot_table(ax, table, n_arms, h1=1):
+def plot_table(ax, table, n_arms, h1=1, title=None):
     for i in range(n_arms):
         ax.set_xlabel('Number of pulls (units of H1)')
         ax.set_ylabel('P(I_t = i)')
+        ax.set_title(title)
         ax.plot(np.array(range(table.shape[0]))/h1,
                 table[:, i], label=str(i+1))
-    ax.legend()
+    if n_arms == 6:
+        ax.legend([r'$\mu_1$', r'$\mu_2$', r'$\mu_3$',
+                   r'$\mu_4$', r'$\mu_5$', r'$\mu_6$'])
+    elif n_arms == 10:
+        ax.legend([r'$\mu_1$', r'$\mu_2$', r'$\mu_3$',
+                   r'$\mu_4$', r'$\mu_5$', r'$\mu_6$',
+                   r'$\mu_7$', r'$\mu_8$', r'$\mu_9$',
+                   r'$\mu_{10}$'])
+    else:
+        ax.legend()

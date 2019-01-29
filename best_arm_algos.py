@@ -146,6 +146,10 @@ def lucb(bandit_means, bandit_scales, epsilon=0.01, delta=0.1,
         if experiment:
             arms_sampled[n_iter] = []
             arms_sampled[n_iter].append(h_t)
+            if not _check_convergence_lucb(h_t, l_t,
+                                           bandit_estimates,
+                                           bandit_bounds):
+                arms_sampled[n_iter].append(l_t)
 
         # Sample arms
         bandit_samples[h_t].append(np.random.normal(
